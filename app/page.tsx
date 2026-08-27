@@ -18,7 +18,7 @@ export default function Home() {
   // Timer and current pose states
   const [sessionActive, setSessionActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [duration, setDuration] = useState<number>(60); // Seconds per pose
+  const [duration, setDuration] = useState<number>(60); // Seconds per pose, 0 means infinite
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [currentPose, setCurrentPose] = useState<PoseInfo | null>(null);
   const [queue, setQueue] = useState<PoseInfo[]>([]);
@@ -27,7 +27,7 @@ export default function Home() {
 
   // Load JSON on component mount
   useEffect(() => {
-    fetch('/gallery.json')
+    fetch('./gallery.json')
       .then((res) => res.json())
       .then((data: PoseInfo[]) => {
         setGallery(data);
@@ -92,13 +92,15 @@ export default function Home() {
 
   // Main timer logic
   useEffect(() => {
+    if (duration === 0) return; // Skip countdown completely if timer is set to infinite
+
     if (sessionActive && !isPaused && timeLeft > 0) {
       timerRef.current = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
     } else if (sessionActive && !isPaused && timeLeft === 0) {
       nextPose();
     }
     return () => clearTimeout(timerRef.current as NodeJS.Timeout);
-  }, [timeLeft, sessionActive, isPaused, nextPose]);
+  }, [timeLeft, sessionActive, isPaused, nextPose, duration]);
 
   // Keyboard Shortcuts Listener
   useEffect(() => {
@@ -151,7 +153,7 @@ export default function Home() {
           <div className="mb-8">
             <label className="block text-sm font-medium mb-2 text-neutral-400">Time per pose</label>
             <div className="grid grid-cols-3 gap-2">
-              {[30, 60, 120, 300].map(time => (
+              {[30, 60, 120, 300, 600, 0].map(time => (
                 <button
                   key={time}
                   onClick={() => setDuration(time)}
@@ -161,7 +163,7 @@ export default function Home() {
                       : 'bg-neutral-900 border border-neutral-700 hover:bg-neutral-700'
                   }`}
                 >
-                  {time >= 60 ? `${time/60}m` : `${time}s`}
+                  {time === 0 ? '∞' : (time >= 60 ? `${time/60}m` : `${time}s`)}
                 </button>
               ))}
             </div>
@@ -197,9 +199,9 @@ export default function Home() {
               </button>
 
               <div className={`text-4xl font-mono font-bold w-24 text-center ${
-                isPaused ? 'text-neutral-500' : (timeLeft <= 5 ? 'text-red-400 animate-pulse' : 'text-teal-400')
+                duration === 0 ? 'text-teal-400' : (isPaused ? 'text-neutral-500' : (timeLeft <= 5 ? 'text-red-400 animate-pulse' : 'text-teal-400'))
               }`}>
-                {formatTime(timeLeft)}
+                {duration === 0 ? '∞' : formatTime(timeLeft)}
               </div>
             </div>
 
